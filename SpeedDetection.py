@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import random
+import sqlite3 as sqlite
 #from time import *
 from decimal import *
 import serial
@@ -39,6 +40,7 @@ segment2_data5 = 22
 segment2_data6 = 17
 segment2_data7 = 5
 pin=''
+
 #segment2_data = 29
 
 speed_max = 0.0
@@ -53,7 +55,7 @@ Ops241A_Transmit_Power = 'PX'
 Ops241A_Threshold_Control = 'QI'
 Ops241A_Module_Information = '??'
 Ops241A_Data_Accuracy = 'F1'
-
+display_max_speed_time = 1
 
 def main():
     print("Started speed detection application")
@@ -123,6 +125,7 @@ def initialize_radar_board():
 
 
 def detect_speed():
+    display_max_speed_time = 1
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     speed_max = 0.0
@@ -139,30 +142,39 @@ def detect_speed():
                 Ops241_rx_float = float(Ops241_rx_bytes)
                 speed_available = True
     if speed_available == True :
-            print('speed is:', Ops241_rx_float)
-            speed =int(abs(Ops241_rx_float))
-            if   speed > 99 :
+	conn=sqlite.connect("test.db")
+	c=conn.cursor()
+	c.execute('''CREATE TABLE IF NOT EXISTS radar (ID INTEGER PRIMARY KEY ASC,Speed FLOAT)''')
+	print('speed is:', Ops241_rx_float)
+	speed =int(abs(Ops241_rx_float))
+	c.execute('''INSERT INTO radar (Speed) VALUES(?)''',(speed,))
+	print('speed inserted')
+	conn.commit()
+	if   speed > 99 :
                  speed = 99
                  for x in range (0, 2) :
                  	speed /= 10
-            show_speed(speed)
-            if Ops241_rx_float > speed_max :
+	show_speed(speed)
+			
+
+			
+	if Ops241_rx_float > speed_max :
                 speed_max = Ops241_rx_float
                 show_speed(Ops241_rx_float)
                 start_time = time.clock()
                 current_time = start_time
-            else :
+	else :
                 display_max_speed_time = 1
                 start_time = time.clock()
                 delta_time = 0.0
                 current_time = time.clock()
                 delta_time = current_time - start_time
-                if delta_time > display_max_speed_time :
+	if delta_time > display_max_speed_time :
                     show_speed(Ops241_rx_float)
                     speed_max = Ops241_rx_float
                     start_time = time.clock()
                     current_time = start_time
-    else :
+	else :
             reset_speed_time = 5
             start_time = time.clock()
             delta_time = 0.0
@@ -176,6 +188,7 @@ def detect_speed():
                 current_time = start_time
    
     #speed = random.randint(0, 99)
+		
     
 
 
